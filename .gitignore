@@ -3,7 +3,16 @@ backend/node_modules/
 
 frontend/.env.local
 backend/.env
+backend-fast-api/.env
 
 frontend/.next/
 backend/dist/
 backend/build/
+
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+
+.DS_Store

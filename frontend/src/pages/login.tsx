@@ -7,7 +7,6 @@ export default function LoginPage() {
   const [form, setForm] = useState<{
     username: string;
     password: string;
-    email?: string;
   }>({ username: "", password: "" });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -25,8 +24,6 @@ export default function LoginPage() {
     setLoading(true);
     setError("");
 
-    console.log("isLogin===>", isLogin);
-
     try {
       if (isLogin) {
         const { data } = await loginUser(form);
@@ -37,16 +34,14 @@ export default function LoginPage() {
         }
       } else {
         const { data } = await registerUser({ ...form, email: "" });
-        localStorage.setItem("token", data.token);
+        await loginUser(form);
         router.push("/");
       }
     } catch (err: any) {
       if (err.response) {
         setError(err.response.data.message || "Authentication failed");
       } else if (err.request) {
-        setError(
-          "Unable to connect to the server. Please try again later."
-        );
+        setError("Unable to connect to the server. Please try again later.");
       } else {
         setError("An unexpected error occurred. Please try again.");
       }

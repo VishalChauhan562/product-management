@@ -1,7 +1,8 @@
 import axios from "axios";
 import Cookies from "js-cookie";
 
-const API_URL = `${process.env.NEXT_PUBLIC_API_URL}/auth` || "http://localhost:5000/auth";
+const API_URL =
+  `${process.env.NEXT_PUBLIC_API_URL}/auth` || "http://localhost:5000/auth";
 
 export const registerUser = async ({ username, email, password }) => {
   try {
@@ -17,7 +18,6 @@ export const registerUser = async ({ username, email, password }) => {
       const error = await response.json();
       throw new Error(error.message || "Registration failed");
     }
-
     return await response.json();
   } catch (error) {
     throw new Error(error.message || "Registration failed");

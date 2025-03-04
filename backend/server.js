@@ -13,29 +13,13 @@ const numCPUs = os.cpus().length;
 if (cluster.isMaster) {
   console.log(`Master process ${process.pid} is running`);
 
-  // With below code we can evenly distribute our Clustre process
-  // but for this project I chose to turn on two clustres 
-
-  // for (let i = 0; i < numCPUs; i++) {
-  //   if (i % 2 === 0) {
-  //     cluster.fork({ CLUSTER_TYPE: "PRODUCT" });
-  //   } else {
-  //     cluster.fork({ CLUSTER_TYPE: "AUTH" });
-  //   }
-  // }
-
-  cluster.fork({ CLUSTER_TYPE: "PRODUCT" });
-  cluster.fork({ CLUSTER_TYPE: "AUTH" });
+  for (let i = 0; i < numCPUs; i++) {
+    cluster.fork();
+  }
 
   cluster.on("exit", (worker, code, signal) => {
     console.log(`Worker ${worker.process.pid} died. Restarting...`);
-    const newWorkerType = worker.process.env.CLUSTER_TYPE;
-
-    if (newWorkerType === "PRODUCT") {
-      cluster.fork({ CLUSTER_TYPE: "PRODUCT" });
-    } else {
-      cluster.fork({ CLUSTER_TYPE: "AUTH" });
-    }
+    cluster.fork(); 
   });
 } else {
   const app = express();
@@ -45,13 +29,8 @@ if (cluster.isMaster) {
 
   connectDB();
 
-  if (process.env.CLUSTER_TYPE === "PRODUCT") {
-    app.use("/api/products", productRoutes);
-    console.log(`Product API worker ${process.pid} started`);
-  } else {
-    app.use("/api/auth", authRoutes);
-    console.log(`Auth API worker ${process.pid} started`);
-  }
+  app.use("/api/products", productRoutes);
+  app.use("/api/auth", authRoutes);
 
   const PORT = process.env.PORT || 5000;
   app.listen(PORT, () => {
