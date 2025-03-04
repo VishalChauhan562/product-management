@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, Request 
 from models.product import Product
-from controllers.product_controller import create_product, get_products, get_product_by_id, update_product, delete_product
+from controllers.product_controller import create_product, get_products, get_product_by_id, update_product, delete_product, search_products
 from middleware.auth import protect
 from middleware.rate_limiter import public_api_limiter, auth_api_limiter
 
@@ -18,6 +18,11 @@ async def list_products(request: Request):
 async def add_product(product: Product, request: Request, user=Depends(protect)):  
     return await create_product(product.model_dump())
 
+@router.get("/search")
+@public_api_limiter
+async def search_products_route(request: Request ,query: str, page: int = 1, limit: int = 10):
+    return await search_products(query=query, page=page, limit=limit)
+
 @router.get("/{id}")
 @public_api_limiter
 async def get_product(id: str, request: Request):  
@@ -32,3 +37,4 @@ async def update_product_route(id: str, product: Product, request: Request, user
 @auth_api_limiter
 async def delete_product_route(id: str, request: Request, user=Depends(protect)): 
     return await delete_product(id)
+

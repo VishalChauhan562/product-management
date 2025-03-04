@@ -80,3 +80,31 @@ async def delete_product(product_id: str):
         return {"message": "Product deleted successfully"}
     except ValueError:
         raise HTTPException(status_code=400, detail="Invalid product ID format")
+    
+
+
+async def search_products(query: str, page: int = 1, limit: int = 10):
+    db = await get_db()
+    products_collection = db["products"]
+    
+    search_query = {
+        "$or": [
+            {"name": {"$regex": query, "$options": "i"}},
+            {"description": {"$regex": query, "$options": "i"}},
+            {"category": {"$regex": query, "$options": "i"}}
+        ]
+    }
+    
+    total = await products_collection.count_documents(search_query)
+    skip = (page - 1) * limit
+    
+    products_cursor = products_collection.find(search_query).skip(skip).limit(limit)
+    products = [serialize_product(product) async for product in products_cursor]
+    
+    return {
+        "products": products,
+        "total": total,
+        "page": page,
+        "limit": limit,
+        "totalPages": (total + limit - 1) // limit
+    }

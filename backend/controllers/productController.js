@@ -73,10 +73,45 @@ const deleteProduct = async (req, res) => {
   }
 };
 
+const searchProducts = async (req, res) => {
+  try {
+    const { query } = req.query; 
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    const skip = (page - 1) * limit;
+
+    if (!query) {
+      return res.status(400).json({ message: "Query parameter is required" });
+    }
+
+    const searchQuery = {
+      $or: [
+        { name: { $regex: query, $options: "i" } },
+        { description: { $regex: query, $options: "i" } },
+        { category: { $regex: query, $options: "i" } }
+      ]
+    };
+
+    const total = await Product.countDocuments(searchQuery);
+    const products = await Product.find(searchQuery).skip(skip).limit(limit);
+
+    res.status(200).json({
+      products,
+      total,
+      page,
+      limit,
+      totalPages: Math.ceil(total / limit),
+    });
+  } catch (error) {
+    res.status(500).json({ message: "Error searching products", error });
+  }
+};
+
 module.exports = {
   createProduct,
   getProducts,
   getProductById,
   updateProduct,
   deleteProduct,
+  searchProducts
 };
