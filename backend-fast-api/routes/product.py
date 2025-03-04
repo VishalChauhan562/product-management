@@ -9,7 +9,9 @@ router = APIRouter(prefix="/api/products", tags=["products"])
 @router.get("/")
 @public_api_limiter
 async def list_products(request: Request):  
-    return await get_products()
+    page = int(request.query_params.get("page", 1))
+    limit = int(request.query_params.get("limit", 10))
+    return await get_products(page=page, limit=limit)
 
 @router.post("/")
 @auth_api_limiter

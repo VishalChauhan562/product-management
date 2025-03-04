@@ -8,13 +8,21 @@ import "react-toastify/dist/ReactToastify.css";
 
 const API_URL = `${process.env.NEXT_PUBLIC_API_URL}/products`;
 
-export default function Home({ initialProducts }: { initialProducts: any[] }) {
+export default function Home({
+  initialData,
+}: {
+  initialData: {
+    products: any[];
+    total: number;
+    page: number;
+    limit: number;
+    totalPages: number;
+  };
+}) {
   const router = useRouter();
   const [token, setToken] = useState<string | null>(null);
   const [isClient, setIsClient] = useState(false);
-  const [localProducts, setLocalProducts] = useState<Array<any>>(
-    initialProducts || []
-  );
+  const [productsData, setProductsData] = useState(initialData);
   const [form, setForm] = useState({
     name: "",
     description: "",
@@ -25,41 +33,49 @@ export default function Home({ initialProducts }: { initialProducts: any[] }) {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isEditMode, setIsEditMode] = useState(false);
 
-  // Sync state with token
   useEffect(() => {
     setIsClient(true);
     const cookieToken = Cookies.get("token");
     setToken(cookieToken || null);
 
-    const { editMode } = router.query;
+    const { editMode, page } = router.query;
     if (editMode === "true" && cookieToken) {
       setIsEditMode(true);
     }
+    if (page) {
+      fetchProducts(Number(page));
+    }
   }, [router.query]);
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setForm({ ...form, [e.target.name]: e.target.value });
-  };
-
-  const fetchProducts = async () => {
+  const fetchProducts = async (page: number = 1) => {
     try {
-      const response = await axios.get(API_URL);
-      console.log("Fetching products:", response.data); // Debug log
-      const products = response.data; // Expecting an array of products
-      if (!Array.isArray(products)) {
-        console.error(
-          "Unexpected response format: products is not an array",
-          products
-        );
-        setLocalProducts([]); // Fallback to empty array if not an array
-      } else {
-        setLocalProducts(products);
-      }
+      const response = await axios.get(API_URL, {
+        params: { page, limit: productsData.limit },
+      });
+      setProductsData(response.data);
     } catch (error) {
       console.error("Error fetching products:", error);
       toast.error("Failed to load products.");
-      setLocalProducts([]); // Fallback to empty array on error
+      setProductsData({ ...productsData, products: [] });
     }
+  };
+
+  const handlePageChange = (newPage: number) => {
+    if (newPage >= 1 && newPage <= productsData.totalPages) {
+      fetchProducts(newPage);
+      router.push(
+        {
+          pathname: router.pathname,
+          query: { ...router.query, page: newPage },
+        },
+        undefined,
+        { shallow: true }
+      );
+    }
+  };
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setForm({ ...form, [e.target.name]: e.target.value });
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -74,13 +90,11 @@ export default function Home({ initialProducts }: { initialProducts: any[] }) {
       if (editingId) {
         await axios.put(`${API_URL}/${editingId}`, form, { headers });
         toast.success("Product updated successfully!");
-        await fetchProducts(); // Refresh all products
       } else {
         await axios.post(API_URL, form, { headers });
         toast.success("Product added successfully!");
-        await fetchProducts(); // Refresh all products
       }
-
+      await fetchProducts(productsData.page);
       setForm({ name: "", description: "", price: "", category: "" });
       setEditingId(null);
       setIsModalOpen(false);
@@ -99,7 +113,7 @@ export default function Home({ initialProducts }: { initialProducts: any[] }) {
       const headers = { Authorization: `Bearer ${token}` };
       await axios.delete(`${API_URL}/${id}`, { headers });
       toast.success("Product deleted successfully!");
-      await fetchProducts(); // Refresh all products
+      await fetchProducts(productsData.page);
     } catch (error) {
       console.error("Error deleting product:", error);
       toast.error("Failed to delete product. Please try again.");
@@ -266,25 +280,23 @@ export default function Home({ initialProducts }: { initialProducts: any[] }) {
         )}
 
         <div className="grid gap-4 md:grid-cols-2">
-          {Array.isArray(localProducts) && localProducts.length > 0 ? (
-            localProducts.map((product) => (
+          {Array.isArray(productsData.products) &&
+          productsData.products.length > 0 ? (
+            productsData.products.map((product) => (
               <div
                 key={product._id}
                 className="bg-white rounded-lg shadow-md hover:shadow-lg transition duration-150 overflow-hidden"
               >
                 <div className="p-4">
                   <h3 className="text-xl font-semibold">{product.name}</h3>
-
                   <div className="text-gray-600 h-20 overflow-y-auto">
                     {product.description}
                   </div>
-
                   <p className="text-indigo-600 font-bold text-lg">
                     ${product.price}
                   </p>
                   <p className="text-gray-500">Category: {product.category}</p>
                 </div>
-
                 {isEditMode && (
                   <div className="bg-gray-50 px-4 py-3 border-t flex justify-end space-x-2">
                     <button
@@ -307,34 +319,71 @@ export default function Home({ initialProducts }: { initialProducts: any[] }) {
             <p>No products available.</p>
           )}
         </div>
+
+        {productsData.totalPages > 1 && (
+          <div className="mt-6 flex justify-center items-center space-x-4">
+            <button
+              onClick={() => handlePageChange(productsData.page - 1)}
+              disabled={productsData.page === 1}
+              className="px-4 py-2 bg-gray-200 rounded-lg disabled:opacity-50"
+            >
+              Previous
+            </button>
+            <span>
+              Page {productsData.page} of {productsData.totalPages}
+            </span>
+            <button
+              onClick={() => handlePageChange(productsData.page + 1)}
+              disabled={productsData.page === productsData.totalPages}
+              className="px-4 py-2 bg-gray-200 rounded-lg disabled:opacity-50"
+            >
+              Next
+            </button>
+          </div>
+        )}
       </div>
     </div>
   );
 }
 
-export const getServerSideProps: GetServerSideProps = async () => {
+export const getServerSideProps: GetServerSideProps = async (context) => {
   try {
-    const response = await axios.get(API_URL);
+    const page = Number(context.query.page) || 1;
+    const limit = 10;
+    const response = await axios.get(API_URL, {
+      params: { page, limit },
+    });
 
-    const products = response.data;
-    if (!Array.isArray(products)) {
-      console.error(
-        "Unexpected response format: products is not an array",
-        products
-      );
-      return {
-        props: {
-          initialProducts: [],
-        },
-      };
-    }
+    const {
+      products,
+      total,
+      page: currentPage,
+      limit: currentLimit,
+      totalPages,
+    } = response.data;
     return {
       props: {
-        initialProducts: products || [],
+        initialData: {
+          products,
+          total,
+          page: currentPage,
+          limit: currentLimit,
+          totalPages,
+        },
       },
     };
   } catch (error) {
     console.error("Error fetching products:", error);
-    return { props: { initialProducts: [] } };
+    return {
+      props: {
+        initialData: {
+          products: [],
+          total: 0,
+          page: 1,
+          limit: 10,
+          totalPages: 1,
+        },
+      },
+    };
   }
 };

@@ -2,6 +2,15 @@
 from fastapi import HTTPException
 from config.db import get_db
 from bson import ObjectId
+from pydantic import BaseModel
+from typing import List
+
+class PaginatedResponse(BaseModel):
+    products: List[dict]
+    total: int
+    page: int
+    limit: int
+    total_pages: int
 
 def serialize_product(product):
     product_dict = dict(product)
@@ -15,15 +24,25 @@ async def create_product(product: dict):
     inserted_product = await products_collection.find_one({"_id": result.inserted_id})
     return serialize_product(inserted_product)
 
-async def get_products():
+async def get_products(page: int = 1, limit: int = 10):
     db = await get_db()
     products_collection = db["products"]
     
-    # Use AsyncIOMotorCursor for async iteration
-    products_cursor = products_collection.find()
-    products = [serialize_product(product) async for product in products_cursor]  
-
-    return products 
+    total = await products_collection.count_documents({})
+    
+    skip = (page - 1) * limit
+    
+    print(f"tota {total} skip {skip} page {page}")
+    products_cursor = products_collection.find().skip(skip).limit(limit)
+    products = [serialize_product(product) async for product in products_cursor]
+    
+    return {
+        "products": products,
+        "total": total,
+        "page": page,
+        "limit": limit,
+        "totalPages": (total + limit - 1) // limit
+    }
 
 async def get_product_by_id(product_id: str):
     db = await get_db()
