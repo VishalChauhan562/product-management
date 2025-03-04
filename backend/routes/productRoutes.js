@@ -6,15 +6,23 @@ const {
   updateProduct,
   deleteProduct,
 } = require("../controllers/productController");
+const {
+  publicApiLimiter,
+  authApiLimiter,
+  authLimiter,
+} = require("../middleware/rateLimiter");
+
 const protect = require("../middleware/authMiddleware");
 
 const router = express.Router();
 
-router.route("/").post(protect, createProduct).get(getProducts);
+router.route("/").get(publicApiLimiter, getProducts);
+router.route("/").post(protect, authApiLimiter, createProduct);
+
 router
   .route("/:id")
-  .get(getProductById)
-  .put(protect, updateProduct)
-  .delete(protect, deleteProduct);
+  .get(publicApiLimiter, getProductById)
+  .put(protect, authApiLimiter, updateProduct)
+  .delete(protect, authApiLimiter, deleteProduct);
 
 module.exports = router;
