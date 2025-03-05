@@ -328,7 +328,7 @@ export default function Home({
                       value={searchQuery}
                       onChange={handleChange}
                       placeholder="Search products..."
-                      className="w-full pl-3 pr-10 py-2 rounded-full border-2 border-indigo-500 focus:outline-none focus:border-white text-gray-900"
+                      className="w-full p-2 rounded-full border-2 border-indigo-500 text-white bg-transparent placeholder-gray-300 focus:ring-2 focus:ring-white"
                     />
                     <button
                       type="submit"

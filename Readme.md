@@ -4,7 +4,11 @@ This guide provides step-by-step instructions on how to set up and run the **Fro
 
 ---
 
-## Prerequisites
+# Demo video
+
+https://drive.google.com/file/d/14mWp6kEGP7P33isQfu2Gjisy-D0IpVFk/view?usp=sharing
+
+## Prerequisites to run in local
 Ensure you have the following installed:
 - **Node.js** (v16+ recommended)
 - **npm** or **yarn**
